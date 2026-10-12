@@ -1,0 +1,104 @@
+#!/usr/bin/env zsh
+# story — lightweight ticket lifecycle for .opencode/{backlog,refined,completed}/FEAT-<n>-<slug>.md
+#
+# Usage:
+#   story status                       summary: backlog, refined (ready / blocked / in progress), completed
+#   story list [backlog|refined|completed]
+#   story next-id                      print the next free FEAT-<n>
+#   story path FEAT-<n>                print the file path (any state)
+#   story show FEAT-<n> [state]        print the story; exit 1 if it is not in [state]
+#   story move FEAT-<n> <state>        move to backlog|refined|completed and update status/updated
+#   story set FEAT-<n> <key> <value>   set a front-matter field (e.g. status in-progress)
+set -euo pipefail
+ROOT="${0:A:h:h}"
+STATES=(backlog refined completed)
+
+field() {  # field <file> <key>
+  awk -v k="$2" 'NR==1 && $0=="---" {fm=1; next} fm && $0=="---" {exit}
+    fm { split($0, a, ": "); if (a[1]==k) { sub("^[^:]+: ", ""); print; exit } }' "$1"
+}
+
+find_story() {  # find_story <FEAT-n> -> path
+  local id="$1" f
+  for s in $STATES; do
+    for f in "$ROOT/$s/$id"-*.md(N); do print -r -- "$f"; return 0; done
+  done
+  print -u2 "story: $id not found"; return 1
+}
+
+state_of() { print -r -- "${${1:h}:t}"; }
+
+set_field() {  # set_field <file> <key> <value>
+  local tmp="$1.tmp"
+  awk -v k="$2" -v v="$3" 'NR==1 && $0=="---" {fm=1; print; next}
+    fm && $0=="---" { if (!done) print k": "v; fm=0; print; next }
+    fm { split($0, a, ": "); if (a[1]==k) { print k": "v; done=1; next } }
+    { print }' "$1" > "$tmp" && mv "$tmp" "$1"
+}
+
+row() {  # one-line summary of a story file
+  local f="$1"
+  printf '%-8s %-11s %-3s %s  (deps: %s)\n' "$(field $f id)" "$(field $f status)" \
+    "$(field $f priority)" "$(field $f title)" "$(field $f depends_on)"
+}
+
+deps_done() {  # deps_done <file> -> 0 when every dependency is completed
+  local deps=${${${(f)"$(field $1 depends_on)"}#\[}%\]} d
+  for d in ${(s:,:)deps}; do
+    d=${d// /}
+    [[ -z $d ]] && continue
+    local hits=($ROOT/completed/$d-*.md(N))
+    (( ${#hits} )) || return 1
+  done
+  return 0
+}
+
+cmd=${1:-status}; shift || true
+case $cmd in
+  next-id)
+    max=0
+    for f in $ROOT/{backlog,refined,completed}/FEAT-*.md(N); do
+      n=${${f:t}#FEAT-}; n=${n%%-*}; (( n > max )) && max=$n
+    done
+    print "FEAT-$((max + 1))" ;;
+  path) find_story "$1" ;;
+  show)
+    f=$(find_story "$1")
+    if [[ -n ${2:-} && $(state_of $f) != $2 ]]; then
+      print -u2 "story: $1 is in '$(state_of $f)', not '$2'"; exit 1
+    fi
+    cat "$f" ;;
+  move)
+    f=$(find_story "$1"); to="$2"
+    [[ ${STATES[(Ie)$to]} -gt 0 ]] || { print -u2 "story: state must be one of $STATES"; exit 2; }
+    dest="$ROOT/$to/${f:t}"
+    [[ $f == $dest ]] || mv "$f" "$dest"
+    new_status=$to; [[ $to == completed ]] && new_status=done
+    set_field "$dest" status "$new_status"
+    set_field "$dest" updated "$(date +%F)"
+    print -r -- "$dest" ;;
+  set)
+    f=$(find_story "$1"); set_field "$f" "$2" "$3"; set_field "$f" updated "$(date +%F)" ;;
+  list)
+    for s in ${1:-$STATES}; do
+      for f in $ROOT/$s/FEAT-*.md(Nn); do row "$f"; done
+    done ;;
+  status)
+    print "## Refined — ready to build"
+    for f in $ROOT/refined/FEAT-*.md(Nn); do
+      [[ $(field $f status) == refined ]] && deps_done "$f" && print -n -- "- " && row "$f"
+    done
+    print "\n## Refined — in progress"
+    for f in $ROOT/refined/FEAT-*.md(Nn); do
+      [[ $(field $f status) == in-progress ]] && print -n -- "- " && row "$f"
+    done
+    print "\n## Refined — blocked by dependencies"
+    for f in $ROOT/refined/FEAT-*.md(Nn); do
+      [[ $(field $f status) == refined ]] && ! deps_done "$f" && print -n -- "- " && row "$f"
+    done
+    print "\n## Backlog — needs refinement"
+    for f in $ROOT/backlog/FEAT-*.md(Nn); do print -n -- "- "; row "$f"; done
+    print "\n## Completed"
+    for f in $ROOT/completed/FEAT-*.md(Nn); do print -n -- "- "; row "$f"; done ;;
+  *) sed -n '2,12p' "$0"; exit 2 ;;
+esac

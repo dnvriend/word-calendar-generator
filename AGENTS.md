@@ -5,9 +5,11 @@ Guidance for AI agents working in a project generated from
 project grows; template-level logging/telemetry details live in `CLAUDE.md`.
 
 ## What this is
-A Typer CLI scaffold (Python 3.14, uv, mypy strict,
-ruff). AI-agent-first: every command ships complete runnable examples in
-`--help`, and groups print help instead of erroring on no subcommand.
+A Typer CLI (Python 3.14, uv, mypy strict, ruff) that generates printable A4
+Word calendars: one page per month, a bordered 7-column Mon-Sun grid with one
+tall row per week (`generate MONTH YEAR [MONTHS]`). AI-agent-first: every
+command ships complete runnable examples in `--help`, and groups print help
+instead of erroring on no subcommand. Start-here map: `.opencode/skills/wcg-architecture`.
 
 ## Always run before declaring work done
 `make pipeline` is the single gate (format → install → lint → typecheck →
@@ -38,6 +40,26 @@ reports; do not bypass. `make check` is the lighter gate (no build/install).
 - Global `-v/-vv/-vvv` must precede the subcommand:
   `word-calendar-generator -v completion generate bash`, not after it.
 
+## Knowledge domains (skills in `.opencode/skills/`)
+| Skill | Covers |
+|---|---|
+| `wcg-architecture` | start-here map: flow, module ownership, invariants |
+| `calendar-layout` | month grids, page sizing, one-page fit validator |
+| `docx-rendering` | python-docx styling, borders, sections, breaks, fonts |
+| `cli-conventions` | Typer wiring, help text, logging, completion, telemetry |
+| `pipeline-quality` | make gates, coverage, vulture/xenon, mypy pitfalls |
+| `story-lifecycle` | FEAT ticket system, Definition of Ready, /commands |
+
+## Work items (story lifecycle)
+Stories are `FEAT-<n>-<slug>.md` files under `.opencode/{backlog,refined,completed}/`;
+folders are states. Commands: `/refine <idea|FEAT-n>` (refinement-agent loop until the
+Definition of Ready holds), `/feat-build FEAT-n` (build + commit; updates owning skills in
+the same commit), `/feat-done FEAT-n` (accept + move to completed), `/feat-status` (board
+summary). **Only refined stories are built.** Board: `.opencode/bin/story status`.
+When a change alters a domain's facts, update that skill in the same commit.
+
 ## Don't
 - Don't construct `typer.Typer()` for groups — use `make_app()`.
 - Don't reintroduce `from click.shell_completion import …`.
+- Don't break the one-page fit budget (4/5/6-week months, both orientations).
+- Don't build backlog stories or bypass the gates.

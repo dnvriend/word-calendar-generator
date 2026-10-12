@@ -7,7 +7,7 @@ asked the AI to generate me one and that was even faster than tinkering.
 One page per month: month title, Mon-Sun header row and a bordered grid with
 tall cells to write in. The table always scales to fit exactly one page.
 
-![October 2026 calendar](docs/screenshot.png)
+![October 2026 calendar](docs/screenshot-wordcraft.png)
 
 ## Install
 
