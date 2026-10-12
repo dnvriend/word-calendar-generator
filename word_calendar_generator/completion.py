@@ -32,8 +32,9 @@ def generate_completion(
     eval "$(word-calendar-generator completion generate zsh)"
 
     \b
-    # Fish (add to ~/.config/fish/completions/word-calendar-generator.fish):
-    word-calendar-generator completion generate fish > ~/.config/fish/completions/word-calendar-generator.fish
+    # Fish (add to ~/.config/fish/completions/):
+    word-calendar-generator completion generate fish \
+      > ~/.config/fish/completions/word-calendar-generator.fish
 
     \b
     File-based Installation (Recommended for better performance):

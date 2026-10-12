@@ -1,44 +1,49 @@
 # word-calendar-generator
 
-[![Python Version](https://img.shields.io/badge/python-3.14+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-A Python CLI tool
+A simple calendar generator for Word or WordCraft; I always wanted a simple
+calendar generator, after tinkering with msword I just went to opencode and
+asked the AI to generate me one and that was even faster than tinkering.
 
-Python 3.14 · Typer · uv · AI-agent-first (`--help` has copy-pasteable examples)
+One page per month: month title, Mon-Sun header row and a bordered grid with
+tall cells to write in. The table always scales to fit exactly one page.
+
+![October 2026 calendar](docs/screenshot.png)
 
 ## Install
+
+Requires [uv](https://docs.astral.sh/uv/) and Python 3.14+.
 
 ```bash
 git clone https://github.com/dnvriend/word-calendar-generator.git
 cd word-calendar-generator
-mise trust && mise install
-uv sync
 uv tool install .
 ```
 
-```bash
-word-calendar-generator --help
-word-calendar-generator --version
-word-calendar-generator completion generate zsh
-```
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `completion generate <shell>` | Shell completion (bash/zsh/fish/powershell/pwsh) |
-
-No subcommand prints help. Global `-v` / `-vv` / `-vvv` must precede the subcommand.
-
-## Develop
+## Usage
 
 ```bash
-uv sync
-make pipeline   # format → lint → types → coverage → quality → security → install
+word-calendar-generator generate 10 2026                        # October 2026, landscape
+word-calendar-generator generate 10 2026 4                      # Oct 2026 - Jan 2027
+word-calendar-generator generate 10 2026 1 --orientation portrait
+word-calendar-generator generate 10 2026 4 --output-dir ~/Documents
 ```
 
-Agent conventions: [AGENTS.md](AGENTS.md)
+Writes `calendar-<year>-<month>.docx` to `~/Downloads` (or `--output-dir`).
 
-## License
+## Arguments
 
-MIT · Dennis Vriend
+| Argument       | Description                                             | Default     |
+| -------------- | ------------------------------------------------------- | ----------- |
+| `MONTH`        | Month number 1-12                                       | required    |
+| `YEAR`         | Full year, e.g. 2026                                    | required    |
+| `MONTHS`       | Consecutive months, one page each                       | 1           |
+| `--orientation`| `landscape` or `portrait` (A4)                          | landscape   |
+| `--output-dir` | Destination directory                                   | ~/Downloads |
+
+## Development
+
+`make pipeline` (full gate) or `make check` (light gate).
+
+## Backlog
+
+- Start-of-week option (currently Monday only)

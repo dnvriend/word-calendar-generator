@@ -5,10 +5,12 @@ and has been reviewed and tested by a human.
 """
 
 import atexit
+from pathlib import Path
 from typing import Annotated
 
 import typer
 
+from word_calendar_generator.calendar import Orientation, write_calendar_doc
 from word_calendar_generator.completion import completion_app
 from word_calendar_generator.logging_config import setup_logging
 from word_calendar_generator.telemetry import TelemetryConfig, TelemetryService
@@ -75,6 +77,53 @@ def main(
 
 
 app.add_typer(completion_app, name="completion")
+
+
+@app.command()
+def generate(
+    month: Annotated[int, typer.Argument(help="Month number 1-12, e.g. 10.")],
+    year: Annotated[int, typer.Argument(help="Full year, e.g. 2026.")],
+    months: Annotated[
+        int,
+        typer.Argument(help="Number of consecutive months, one page each (default 1)."),
+    ] = 1,
+    output_dir: Annotated[
+        Path,
+        typer.Option(
+            "--output-dir",
+            "-o",
+            help="Directory to write the calendar to (default ~/Downloads).",
+        ),
+    ] = Path.home() / "Downloads",
+    orientation: Annotated[
+        Orientation,
+        typer.Option(
+            "--orientation",
+            case_sensitive=False,
+            help="Page orientation: landscape (default) or portrait.",
+        ),
+    ] = Orientation.LANDSCAPE,
+) -> None:
+    """Generate a printable Word calendar (Mon-Sun grid), one page per month.
+
+    Writes <output-dir>/calendar-<year>-<month>.docx with each month name
+    as title and a bordered 7-column table with one tall row per week.
+    Defaults to A4 landscape; use --orientation portrait for A4 portrait.
+    The optional third argument generates consecutive months (walking
+    across year boundaries), e.g. 10 2026 4 -> Oct, Nov, Dec 2026, Jan 2027.
+
+    \b Examples:
+        word-calendar-generator generate 10 2026
+        word-calendar-generator generate 10 2026 4
+        word-calendar-generator generate 10 2026 4 --orientation portrait
+        word-calendar-generator generate 10 2026 --output-dir ~/Documents
+    """
+    try:
+        path = write_calendar_doc(year, month, output_dir, orientation, months)
+    except ValueError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(str(path))
 
 
 if __name__ == "__main__":
